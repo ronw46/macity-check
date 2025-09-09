@@ -1,17 +1,30 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-import time
 import os
+import time
+import random
 
-AUTHOR_URL = "https://www.macitynet.it/author/yuri/"
-EXPECTED_AUTHOR = "Yuri Di Prodo"
-HEADERS = {"User-Agent": "Mozilla/5.0"}
+AUTHOR_URL = "https://macitynet.it/author/yuri/"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/117.0.0.0 Safari/537.36"
+}
+
+def load_articles_history():
+    if os.path.exists("articles.json"):
+        with open("articles.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_articles_history(data):
+    with open("articles.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def get_article_links():
     links = []
     page = 1
-    print("🔍 Raccolta articoli da pagina autore...")
     while True:
         url = f"{AUTHOR_URL}page/{page}/"
         res = requests.get(url, headers=HEADERS)
@@ -22,82 +35,54 @@ def get_article_links():
         if not articles:
             break
         for a in articles:
-            href = a["href"]
-            title = a.text.strip()
-            links.append({"title": title, "url": href})
+            links.append({"title": a.text.strip(), "url": a["href"]})
         page += 1
-        time.sleep(0.5)
-    print(f"✅ Trovati {len(links)} articoli.")
+        time.sleep(random.uniform(1, 2))
     return links
 
-def check_author(article):
-    res = requests.get(article["url"], headers=HEADERS)
+def get_author_from_article(url):
+    res = requests.get(url, headers=HEADERS)
     if res.status_code != 200:
-        return "NOT_FOUND"
+        return None
     soup = BeautifulSoup(res.text, "html.parser")
-    text = soup.get_text()
-    if EXPECTED_AUTHOR not in text:
-        return "AUTHOR_CHANGED"
-    return "OK"
-
-def load_previous():
-    try:
-        with open("articles.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-def save_current(articles):
-    with open("articles.json", "w") as f:
-        json.dump(articles, f, indent=2)
-
-def send_telegram(message):
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message[:4000],  # Telegram message limit
-        "parse_mode": "HTML"
-    }
-    try:
-        r = requests.post(url, data=payload)
-        if not r.ok:
-            print(f"❌ Errore Telegram: {r.status_code} {r.text}")
-    except Exception as e:
-        print(f"❌ Errore Telegram: {e}")
+    author_tag = soup.select_one("span.author.vcard")
+    if not author_tag:
+        return None
+    return author_tag.text.strip()
 
 def main():
-    current_articles = get_article_links()
-    previous_articles = load_previous()
-    current_urls = {a["url"]: a["title"] for a in current_articles}
-    previous_urls = set(previous_articles.keys())
+    old_data = load_articles_history()
+    new_data = {}
 
-    removed = previous_urls - set(current_urls.keys())
+    articles = get_article_links()
+    for article in articles:
+        author = get_author_from_article(article["url"])
+        if author:
+            new_data[article["url"]] = {"title": article["title"], "author": author}
+        else:
+            new_data[article["url"]] = {"title": article["title"], "author": None}
+        time.sleep(random.uniform(1, 2))
+
+    # Confronta old_data e new_data
     changes = []
+    for url, info in new_data.items():
+        if url not in old_data:
+            changes.append(f"Nuovo articolo: {info['title']} ({url})")
+        elif old_data[url]["author"] != info["author"]:
+            changes.append(f"Autore cambiato per {info['title']}: da '{old_data[url]['author']}' a '{info['author']}'")
 
-    # Controlla autore per ogni articolo
-    for article in current_articles:
-        status = check_author(article)
-        if status == "AUTHOR_CHANGED":
-            changes.append(f"❗ Autore cambiato:\n{article['title']}\n{article['url']}")
-        elif status == "NOT_FOUND":
-            changes.append(f"❌ Articolo non raggiungibile:\n{article['title']}\n{article['url']}")
-        time.sleep(0.5)
+    for url in old_data:
+        if url not in new_data:
+            changes.append(f"Articolo rimosso: {old_data[url]['title']} ({url})")
 
-    save_current({a["url"]: a["title"] for a in current_articles})
-
-    if removed or changes:
-        message = "<b>📡 Monitor WordPress - Cambiamenti rilevati</b>\n\n"
-        if removed:
-            message += f"⚠️ Articoli rimossi ({len(removed)}):\n"
-            for url in removed:
-                message += f"- {previous_articles[url]}\n"
-        if changes:
-            message += "\n" + "\n\n".join(changes)
-        send_telegram(message)
+    # Se ci sono cambiamenti, stampa e salva
+    if changes:
+        print("Modifiche rilevate:")
+        for c in changes:
+            print("- " + c)
+        save_articles_history(new_data)
     else:
-        print("✅ Nessun cambiamento rilevato.")
+        print("Nessuna modifica.")
 
 if __name__ == "__main__":
     main()
