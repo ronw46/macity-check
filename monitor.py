@@ -4,20 +4,22 @@ import json
 import os
 import time
 import random
+import datetime
 
 # URL della tua pagina autore
 AUTHOR_URL = "https://macitynet.it/author/yuri/"
 
-# Header realistico per non sembrare un bot
+# Header per sembrare un browser reale
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                   "AppleWebKit/537.36 (KHTML, like Gecko) "
                   "Chrome/117.0.0.0 Safari/537.36"
 }
 
-# Token e chat ID da GitHub Secrets (via env)
+# Token e chat ID dalle variabili d'ambiente (GitHub Secrets)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
 
 def load_articles_history():
     if os.path.exists("articles.json"):
@@ -28,6 +30,12 @@ def load_articles_history():
 def save_articles_history(data):
     with open("articles.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+def append_to_log(changes):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"\n[{timestamp}]\n" + "\n".join(f"- {c}" for c in changes) + "\n"
+    with open("log.txt", "a", encoding="utf-8") as log_file:
+        log_file.write(log_entry)
 
 def send_telegram_message(message):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -111,8 +119,11 @@ def main():
         print(message)
         send_telegram_message(message)
         save_articles_history(new_data)
+        append_to_log(changes)
     else:
-        print("✅ Nessuna modifica rilevata.")
+        message = "✅ Nessuna modifica trovata negli articoli.\n(Controllo eseguito correttamente)"
+        print(message)
+        send_telegram_message(message)
 
 if __name__ == "__main__":
     main()
