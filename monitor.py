@@ -92,6 +92,7 @@ def main():
     new_data = {}
 
     articles = get_article_links()
+    print(f"Trovati {len(articles)} articoli")
     for article in articles:
         author = get_author_from_article(article["url"])
         new_data[article["url"]] = {
@@ -118,12 +119,14 @@ def main():
         message = "🚨 *Modifiche rilevate negli articoli:*\n\n" + "\n\n".join(changes)
         print(message)
         send_telegram_message(message)
-        save_articles_history(new_data)
         append_to_log(changes)
     else:
         message = "✅ Nessuna modifica trovata negli articoli.\n(Controllo eseguito correttamente)"
         print(message)
         send_telegram_message(message)
+
+    # SALVA SEMPRE IL FILE articles.json
+    save_articles_history(new_data)
 
 if __name__ == "__main__":
     main()
