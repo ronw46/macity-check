@@ -11,6 +11,7 @@ jobs:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      GH_PAT: ${{ secrets.GH_PAT }}
 
     steps:
       - name: Checkout repo
@@ -38,7 +39,8 @@ jobs:
 
           if ! git diff --cached --quiet; then
             git commit -m "Aggiorna articles.json e log.txt con ultimi dati"
-            git push
+            git remote set-url origin https://x-access-token:${GH_PAT}@github.com/ronw46/macity-check.git
+            git push origin HEAD:main
           else
             echo "Nessuna modifica da pushare"
           fi
