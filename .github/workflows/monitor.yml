@@ -32,7 +32,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add articles.json log.txt
+
+          if [ -f articles.json ]; then git add articles.json; fi
+          if [ -f log.txt ]; then git add log.txt; fi
+
           if ! git diff --cached --quiet; then
             git commit -m "Aggiorna articles.json e log.txt con ultimi dati"
             git push
