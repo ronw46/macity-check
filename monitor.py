@@ -12,6 +12,10 @@ HEADERS = {
                   "Chrome/117.0.0.0 Safari/537.36"
 }
 
+# Inserisci qui i tuoi dati Telegram
+TELEGRAM_BOT_TOKEN = "8464818519:AAFtM5rNJySyfh57fRsVQIQ1X1COxhiAg3s"
+TELEGRAM_CHAT_ID = "224550300"
+
 def load_articles_history():
     if os.path.exists("articles.json"):
         with open("articles.json", "r", encoding="utf-8") as f:
@@ -21,6 +25,16 @@ def load_articles_history():
 def save_articles_history(data):
     with open("articles.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    try:
+        res = requests.post(url, data=payload)
+        if res.status_code != 200:
+            print(f"Errore invio Telegram: {res.text}")
+    except Exception as e:
+        print(f"Eccezione invio Telegram: {e}")
 
 def get_article_links():
     links = []
@@ -63,23 +77,21 @@ def main():
             new_data[article["url"]] = {"title": article["title"], "author": None}
         time.sleep(random.uniform(1, 2))
 
-    # Confronta old_data e new_data
     changes = []
     for url, info in new_data.items():
         if url not in old_data:
-            changes.append(f"Nuovo articolo: {info['title']} ({url})")
+            changes.append(f"🆕 *Nuovo articolo:* {info['title']} \n{url}")
         elif old_data[url]["author"] != info["author"]:
-            changes.append(f"Autore cambiato per {info['title']}: da '{old_data[url]['author']}' a '{info['author']}'")
+            changes.append(f"✏️ *Autore cambiato* per \"{info['title']}\": da '{old_data[url]['author']}' a '{info['author']}'")
 
     for url in old_data:
         if url not in new_data:
-            changes.append(f"Articolo rimosso: {old_data[url]['title']} ({url})")
+            changes.append(f"🗑️ *Articolo rimosso:* {old_data[url]['title']} \n{url}")
 
-    # Se ci sono cambiamenti, stampa e salva
     if changes:
-        print("Modifiche rilevate:")
-        for c in changes:
-            print("- " + c)
+        message = "🚨 *Modifiche rilevate negli articoli:*\n\n" + "\n\n".join(changes)
+        print(message)
+        send_telegram_message(message)
         save_articles_history(new_data)
     else:
         print("Nessuna modifica.")
