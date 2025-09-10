@@ -26,6 +26,9 @@ def send_telegram_message(message: str):
         print(f"[Telegram] Errore invio messaggio: {e}")
 
 def init_db():
+    # Crea la cartella scripts/ se non esiste
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
