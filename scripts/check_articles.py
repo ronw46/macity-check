@@ -26,9 +26,7 @@ def send_telegram_message(message: str):
         print(f"[Telegram] Errore invio messaggio: {e}")
 
 def init_db():
-    # Crea la cartella scripts/ se non esiste
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
@@ -71,7 +69,6 @@ def fetch_current_articles():
         articles.extend(page_articles)
         page += 1
 
-        # Attesa random per non farsi bloccare
         delay = random.uniform(1, 3)
         print(f"[Delay] Attendo {delay:.2f} secondi...")
         time.sleep(delay)
@@ -80,6 +77,9 @@ def fetch_current_articles():
     return articles
 
 def load_old_articles():
+    if not os.path.exists(DB_PATH):
+        print("[DB] Nessun database esistente trovato.")
+        return {}
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT url, title FROM articles")
@@ -102,12 +102,10 @@ def compare_articles(old_articles, current_articles):
     disappeared = []
     new_articles = []
 
-    # Articoli rimossi
     for url in old_urls:
         if url not in current_urls:
             disappeared.append((url, old_articles[url]))
 
-    # Articoli nuovi
     current_dict = dict(current_articles)
     for url in current_urls:
         if url not in old_urls:
