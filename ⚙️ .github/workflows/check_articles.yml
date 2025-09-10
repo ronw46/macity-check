@@ -2,7 +2,7 @@ name: Monitor Articoli Yuri
 
 on:
   schedule:
-    - cron: "0 3 * * 0"  # Ogni domenica alle 03:00 UTC (circa le 5:00 in Italia)
+        - cron: "0 1 * * *"  # Ogni giorno alle 01:00 UTC (cioè ogni notte alle 3:00 ora italiana)
   workflow_dispatch:
 
 jobs:
