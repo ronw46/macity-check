@@ -10,6 +10,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 AUTHOR_URL_BASE = "https://www.macitynet.it/author/yuri"
 
 DB_PATH = "scripts/db.sqlite"
+MAX_PAGES = 300  # Limite massimo di pagine da scansionare
 
 def send_telegram_message(message: str):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -46,7 +47,7 @@ def fetch_current_articles():
         "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
     }
 
-    while True:
+    while page <= MAX_PAGES:
         url = f"{AUTHOR_URL_BASE}/page/{page}/"
         print(f"[Fetch] Scaricamento pagina {page}...")
         response = requests.get(url, headers=headers)
