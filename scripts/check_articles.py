@@ -92,15 +92,25 @@ def save_articles(articles):
     conn.commit()
     conn.close()
 
-def check_for_disappeared_articles(old_articles, current_articles):
+def compare_articles(old_articles, current_articles):
     current_urls = {url for url, _ in current_articles}
+    old_urls = set(old_articles.keys())
+
     disappeared = []
+    new_articles = []
 
-    for url, title in old_articles.items():
+    # Articoli rimossi
+    for url in old_urls:
         if url not in current_urls:
-            disappeared.append((url, title))
+            disappeared.append((url, old_articles[url]))
 
-    return disappeared
+    # Articoli nuovi
+    current_dict = dict(current_articles)
+    for url in current_urls:
+        if url not in old_urls:
+            new_articles.append((url, current_dict[url]))
+
+    return disappeared, new_articles
 
 def main():
     init_db()
@@ -113,15 +123,24 @@ def main():
         save_articles(current_articles)
         return
 
-    disappeared = check_for_disappeared_articles(old_articles, current_articles)
+    disappeared, new_articles = compare_articles(old_articles, current_articles)
+
+    messages = []
 
     if disappeared:
-        message = "<b>⚠️ Articoli scomparsi da macitynet.it/author/yuri/</b>\n"
+        msg = "<b>⚠️ Articoli scomparsi da macitynet.it/author/yuri/</b>\n"
         for url, title in disappeared:
-            message += f"• <a href=\"{url}\">{title}</a>\n"
-        send_telegram_message(message)
-    else:
-        print("[Check] Nessun articolo scomparso.")
+            msg += f"• <a href=\"{url}\">{title}</a>\n"
+        messages.append(msg)
+
+    if new_articles:
+        msg = "<b>🆕 Nuovi articoli pubblicati da Yuri</b>\n"
+        for url, title in new_articles:
+            msg += f"• <a href=\"{url}\">{title}</a>\n"
+        messages.append(msg)
+
+    for msg in messages:
+        send_telegram_message(msg)
 
     save_articles(current_articles)
 
