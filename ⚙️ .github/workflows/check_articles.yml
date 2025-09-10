@@ -1,0 +1,44 @@
+name: Monitor Articoli Yuri
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"  # Ogni domenica alle 03:00 UTC (circa le 5:00 in Italia)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Ripristina cache (db.sqlite)
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: scripts/db.sqlite
+          key: articles-db-v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Installa dipendenze
+        run: |
+          pip install -r scripts/requirements.txt
+
+      - name: Esegui controllo articoli
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python scripts/check_articles.py
+
+      - name: Salva cache (db.sqlite)
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v3
+        with:
+          path: scripts/db.sqlite
+          key: articles-db-v1
