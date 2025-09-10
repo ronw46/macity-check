@@ -29,6 +29,9 @@ jobs:
         run: |
           pip install -r scripts/requirements.txt
 
+      - name: Crea cartella scripts se non esiste
+        run: mkdir -p scripts
+
       - name: Esegui controllo articoli
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
